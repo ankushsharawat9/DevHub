@@ -2,12 +2,17 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
+
 
 // Load environment variables from .env file
 dotenv.config();
 
 // Initialize Express app
 const app = express();
+
+// server uploaded file statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // CORS configuration (allow requests from frontend at localhost:3000)
 app.use(cors({

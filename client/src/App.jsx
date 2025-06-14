@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 import ProtectedRoute from './ProtectedRoute';
 import Profile from './pages/Profile';
+import EditProfile from './pages/EditProfile';
+
 
 
 function Register() {
@@ -106,7 +108,7 @@ function Dashboard() {
 
 const App = () => (
   <BrowserRouter>
-    <Routes>
+ <Routes>
   <Route path="/register" element={<Register />} />
   <Route path="/login" element={<Login />} />
   <Route
@@ -126,6 +128,14 @@ const App = () => (
     }
   />
   <Route
+    path="/edit-profile"
+    element={
+      <ProtectedRoute>
+        <EditProfile />
+      </ProtectedRoute>
+    }
+  />
+  <Route
     path="/"
     element={
       <div>
@@ -133,11 +143,14 @@ const App = () => (
         <a href="/register">Go to Register</a><br />
         <a href="/login">Go to Login</a><br />
         <a href="/dashboard">Go to Dashboard (Protected)</a><br />
-        <a href="/profile">Go to Profile (Protected)</a>
+        <a href="/profile">Go to Profile (Protected)</a><br />
+        <a href="/edit-profile">Edit Profile (Protected)</a>
       </div>
     }
   />
 </Routes>
+
+
   </BrowserRouter>
 );
 

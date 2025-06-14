@@ -24,9 +24,19 @@ const Profile = () => {
 
   return (
     <div>
+      {user.profilePic && (
+  <img
+    src={`http://localhost:8080${user.profilePic}`}
+    alt="Profile"
+    style={{ width: '150px', height: '150px', borderRadius: '50%' }}
+  />
+)}
+
       <h1>👤 Profile</h1>
       <p><strong>Name:</strong> {user.name}</p>
       <p><strong>Email:</strong> {user.email}</p>
+      <a href="/edit-profile">Edit My Profile</a>
+
     </div>
   );
 };
