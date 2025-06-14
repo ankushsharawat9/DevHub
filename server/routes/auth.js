@@ -3,23 +3,7 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const verifyToken = require('../middleware/authMiddleware');
-const multer = require('multer');
-const path = require('path');
-
-
-
-
-// Set up disk storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // create this folder manually
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-const upload = multer({ storage });
+const { upload } = require('../config/cloudinary'); // ✅ Cloudinary Multer config
 
 // GET /api/auth/me (Protected)
 router.get('/me', verifyToken, async (req, res) => {
@@ -27,6 +11,7 @@ router.get('/me', verifyToken, async (req, res) => {
     const user = await User.findById(req.user.id).select('-password');
     res.json(user);
   } catch (err) {
+    console.error('❌ GET /me Error:', err.message);
     res.status(500).json({ message: "Something went wrong" });
   }
 });
@@ -40,7 +25,7 @@ router.post('/register', async (req, res) => {
     await newUser.save();
     res.status(201).json({ message: 'User registered successfully' });
   } catch (err) {
-    console.error('Register Error:', err.message);
+    console.error('❌ Register Error:', err.message);
     res.status(500).json({ error: 'Server error during registration' });
   }
 });
@@ -66,12 +51,12 @@ router.post('/login', async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email },
     });
   } catch (err) {
-    console.error('Login Error:', err.message);
+    console.error('❌ Login Error:', err.message);
     res.status(500).json({ error: 'Server error during login' });
   }
 });
 
-// UPDATE USER PROFILE
+// UPDATE USER PROFILE (name, email, password)
 router.put('/me', verifyToken, async (req, res) => {
   try {
     const updates = {};
@@ -90,28 +75,31 @@ router.put('/me', verifyToken, async (req, res) => {
 
     res.json({ message: 'Profile updated successfully', user: updatedUser });
   } catch (err) {
-    console.error('Profile Update Error:', err.message);
+    console.error('❌ Profile Update Error:', err.message);
     res.status(500).json({ message: 'Server error during profile update' });
   }
 });
 
+// UPDATE PROFILE PHOTO (upload to Cloudinary)
 router.put('/me/photo', verifyToken, upload.single('photo'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    console.log('📸 Uploaded file:', req.file); // TEMP debug
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { profilePic: `/uploads/${req.file.filename}` },
+      { profilePic: req.file.path }, // Cloudinary gives secure URL in path
       { new: true }
     ).select('-password');
 
     res.json({ message: 'Profile picture updated', user: updatedUser });
   } catch (err) {
-    console.error('❌ Photo upload error:', err.message);
+    console.error('❌ Cloudinary Upload Error:', err.stack);
     res.status(500).json({ message: 'Server error during photo upload' });
   }
 });
-
-
 
 module.exports = router;

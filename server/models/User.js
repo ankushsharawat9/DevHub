@@ -6,11 +6,10 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   isVerified: { type: Boolean, default: false },
-  profilePic: {
-  type: String,
-  default: ''
-}
+profilePic: { type: String },
+profilePicId: { type: String } // 👈 new field to store Cloudinary public_id
 
+,
 }, { timestamps: true });
 
 // Hash password before save

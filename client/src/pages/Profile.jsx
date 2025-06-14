@@ -22,14 +22,16 @@ const Profile = () => {
 
   if (!user) return <p>Loading profile...</p>;
 
-  return (
+ return (
     <div>
       {user.profilePic && (
-  <img
-    src={`http://localhost:8080${user.profilePic}`}
-    alt="Profile"
-    style={{ width: '150px', height: '150px', borderRadius: '50%' }}
-  />
+<img
+  src={user.profilePic || '/default-avatar.png'}
+  alt="Profile"
+  width="150"
+  style={{ borderRadius: '50%' }}
+/>
+
 )}
 
       <h1>👤 Profile</h1>
