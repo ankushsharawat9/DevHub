@@ -2,44 +2,107 @@ const router = require('express').Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const verifyToken = require('../middleware/authMiddleware');
-const { upload } = require('../config/cloudinary'); // ✅ Cloudinary Multer config
+const { upload } = require('../config/cloudinary');
+const { sendVerificationEmail } = require('../utils/sendVerificationEmail');
 
-// GET /api/auth/me (Protected)
+// ✅ GET /me - Get current user's info
 router.get('/me', verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (err) {
-    console.error('❌ GET /me Error:', err.message);
-    res.status(500).json({ message: "Something went wrong" });
+    console.error('❌ GET /me Error:', err);
+    res.status(500).json({ message: 'Failed to fetch user info' });
   }
 });
 
-// REGISTER
+// ✅ POST /register - Register with email verification
 router.post('/register', async (req, res) => {
   try {
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    const newUser = new User({ ...req.body, password: hashedPassword });
+    const { name, email, password } = req.body;
+    if (!name || !email || !password)
+      return res.status(400).json({ message: 'All fields are required' });
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ message: 'Email already registered' });
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+
+    const newUser = new User({
+      name,
+      email,
+      password, // 🔒 Let Mongoose hash this
+      isVerified: false,
+      verificationToken,
+      verificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+    });
 
     await newUser.save();
-    res.status(201).json({ message: 'User registered successfully' });
+    await sendVerificationEmail(email, verificationToken);
+
+    res.status(201).json({
+      message: 'Registration successful. Please verify your email.',
+    });
   } catch (err) {
-    console.error('❌ Register Error:', err.message);
-    res.status(500).json({ error: 'Server error during registration' });
+    console.error('❌ Register Error:', err);
+    res.status(500).json({ message: 'Server error during registration' });
   }
 });
 
-// LOGIN
+// ✅ GET /verify-email?token=... - Verify user email
+router.get('/verify-email', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ message: 'Missing token' });
+
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationTokenExpires: { $gt: Date.now() },
+    });
+
+    if (!user)
+      return res.status(400).json({ message: 'Invalid or expired token' });
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'Email verified successfully!' });
+  } catch (err) {
+    console.error('❌ Verification Error:', err);
+    res.status(500).json({ message: 'Email verification failed' });
+  }
+});
+
+// ✅ POST /login - Login and get JWT
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    console.log("📩 Login attempt:", { email });
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password required' });
+    }
+
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ message: 'Please verify your email first' });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: '1d',
@@ -51,12 +114,12 @@ router.post('/login', async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email },
     });
   } catch (err) {
-    console.error('❌ Login Error:', err.message);
-    res.status(500).json({ error: 'Server error during login' });
+    console.error('❌ Login Error:', err);
+    res.status(500).json({ message: 'Server error during login' });
   }
 });
 
-// UPDATE USER PROFILE (name, email, password)
+// ✅ PUT /me - Update user profile
 router.put('/me', verifyToken, async (req, res) => {
   try {
     const updates = {};
@@ -65,40 +128,43 @@ router.put('/me', verifyToken, async (req, res) => {
     if (req.body.email) updates.email = req.body.email;
 
     if (req.body.password) {
-      const hashedPassword = await bcrypt.hash(req.body.password, 10);
-      updates.password = hashedPassword;
+      // hash manually since findByIdAndUpdate bypasses Mongoose hooks
+      updates.password = await bcrypt.hash(req.body.password, 10);
     }
 
     const updatedUser = await User.findByIdAndUpdate(req.user.id, updates, {
       new: true,
     }).select('-password');
 
-    res.json({ message: 'Profile updated successfully', user: updatedUser });
+    if (!updatedUser)
+      return res.status(404).json({ message: 'User not found' });
+
+    res.json({ message: 'Profile updated', user: updatedUser });
   } catch (err) {
-    console.error('❌ Profile Update Error:', err.message);
+    console.error('❌ Profile Update Error:', err);
     res.status(500).json({ message: 'Server error during profile update' });
   }
 });
 
-// UPDATE PROFILE PHOTO (upload to Cloudinary)
+// ✅ PUT /me/photo - Upload or change profile picture
 router.put('/me/photo', verifyToken, upload.single('photo'), async (req, res) => {
   try {
-    if (!req.file) {
+    if (!req.file)
       return res.status(400).json({ message: 'No file uploaded' });
-    }
-
-    console.log('📸 Uploaded file:', req.file); // TEMP debug
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { profilePic: req.file.path }, // Cloudinary gives secure URL in path
+      { profilePic: req.file.path },
       { new: true }
     ).select('-password');
 
+    if (!updatedUser)
+      return res.status(404).json({ message: 'User not found' });
+
     res.json({ message: 'Profile picture updated', user: updatedUser });
   } catch (err) {
-    console.error('❌ Cloudinary Upload Error:', err.stack);
-    res.status(500).json({ message: 'Server error during photo upload' });
+    console.error('❌ Photo Upload Error:', err);
+    res.status(500).json({ message: 'Error uploading profile picture' });
   }
 });
 

@@ -1,16 +1,21 @@
 // src/ProtectedRoute.jsx
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
 
+  // Optional: Add loading logic if checking auth from API or context
+  // const [loading, setLoading] = useState(true);
+  // useEffect(() => { ... }, []);
+
   if (!token) {
-    // Redirect to login if token is missing
-    return <Navigate to="/login" />;
+    // If no token, redirect to login
+    return <Navigate to="/login" replace />;
   }
 
-  return children;
+  // If used as a wrapper for layout-based protection
+  return children ? children : <Outlet />;
 };
 
 export default ProtectedRoute;
