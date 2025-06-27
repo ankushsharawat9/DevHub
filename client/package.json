@@ -21,7 +21,8 @@
     "react-scripts": "5.0.1",
     "react-toastify": "^11.0.5",
     "web-vitals": "^2.1.4",
-    "yup": "^1.6.1"
+    "yup": "^1.6.1",
+    "zxcvbn": "^4.4.2"
   },
   "scripts": {
     "start": "react-scripts start",

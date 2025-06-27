@@ -31,33 +31,38 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    tokenVersion: {
+  type: Number,
+  default: 0,
+},
 
-    verificationToken: {
-      type: String, // Token used to verify email
-    },
 
-    verificationTokenExpires: {
-      type: Date, // Token expiration (e.g., 1 hour from generation)
-    },
+    // ✅ Email Verification
+    verificationToken: String,
+    verificationTokenExpires: Date,
 
-    profilePic: {
-      type: String, // Cloudinary secure URL
-    },
+    // ✅ Forgot Password
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
 
-    profilePicId: {
-      type: String, // Cloudinary public_id
-    },
+    // ✅ Track password changes for JWT invalidation
+    passwordChangedAt: Date,
+
+    // ✅ Profile Info
+    profilePic: String,        // Cloudinary secure_url
+    profilePicId: String,      // Cloudinary public_id
   },
   { timestamps: true }
 );
 
-// 🔐 Hash password before saving
+// 🔐 Hash password before saving, update passwordChangedAt
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
 
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+    this.passwordChangedAt = new Date(); // 👈 update timestamp when password changes
     next();
   } catch (err) {
     next(err);

@@ -9,10 +9,10 @@ const Navbar = () => {
       <h1 className="text-xl font-bold tracking-wide">🚀 DevHub</h1>
 
       <div className="flex items-center space-x-6">
-        <Link to="/home" className="hover:text-primary-500">Home</Link>
-        <Link to="/register" className="hover:text-primary-500">Register</Link>
-        <Link to="/login" className="hover:text-primary-500">Login</Link>
-        <Link to="/dashboard" className="hover:text-primary-500">Dashboard</Link>
+        <Link to="/home" className="hover:text-primary-500">Home</Link>&nbsp; &nbsp; 
+        <Link to="/register" className="hover:text-primary-500">Register</Link>&nbsp; &nbsp; 
+        <Link to="/login" className="hover:text-primary-500">Login</Link>&nbsp; &nbsp; 
+        <Link to="/dashboard" className="hover:text-primary-500">Dashboard</Link>&nbsp; &nbsp; &nbsp; &nbsp; 
         <Link to="/profile" className="hover:text-primary-500">Profile</Link>
 
         {/* Add Theme Toggle Button */}

@@ -11,12 +11,18 @@ import Verified from './pages/Verified';
 import Profile from './pages/Profile';
 import EditProfile from './pages/EditProfile';
 import Dashboard from './pages/Dashboard';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Layout
 import MainLayout from './layouts/MainLayout';
 
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
+
+
+// Inside <Routes>
+
 
 const App = () => {
   const token = localStorage.getItem('token');
@@ -56,6 +62,8 @@ const App = () => {
               </MainLayout>
             }
           />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+<Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Auth Routes (no layout) */}
           <Route
@@ -108,8 +116,12 @@ const App = () => {
               </div>
             }
           />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+<Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </Router>
+
+      
     </div>
   );
 };

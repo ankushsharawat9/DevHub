@@ -12,6 +12,10 @@ const EditProfile = () => {
   const [showCropper, setShowCropper] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -63,20 +67,47 @@ const EditProfile = () => {
     setLoading(true);
 
     try {
-      // Update name/email
+      // 🔒 Handle password change if toggled
+      if (showPasswordFields) {
+        if (!currentPassword || !newPassword || !confirmPassword) {
+          toast.error('Please fill in all password fields');
+          setLoading(false);
+          return;
+        }
+
+        if (newPassword !== confirmPassword) {
+          toast.error('New passwords do not match');
+          setLoading(false);
+          return;
+        }
+
+        await axios.put(
+          'http://localhost:8080/api/auth/change-password',
+          { currentPassword, newPassword },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        localStorage.removeItem('token');
+        toast.success('✅ Password changed successfully');
+        toast.info('Please log in again');
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+
+      // ✅ Update name/email
       await axios.put('http://localhost:8080/api/auth/me', formData, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Upload photo if exists
+      // ✅ Upload photo if exists
       if (croppedImage) {
         const formDataImg = new FormData();
         formDataImg.append('photo', croppedImage);
         await axios.put('http://localhost:8080/api/auth/me/photo', formDataImg, {
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data'
-          }
+            'Content-Type': 'multipart/form-data',
+          },
         });
       }
 
@@ -94,36 +125,98 @@ const EditProfile = () => {
   if (initialLoading) return <p>Loading profile...</p>;
 
   return (
-    <div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <ToastContainer position="top-center" autoClose={3000} />
-      <h2>✏️ Edit Profile</h2>
-      <form onSubmit={handleSubmit} encType="multipart/form-data">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-6 rounded-xl shadow-md max-w-md w-full"
+        encType="multipart/form-data"
+      >
+        <h2 className="text-2xl font-bold mb-4">✏️ Edit Profile</h2>
+
         <input
           placeholder="Name"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          className="w-full p-2 border border-gray-300 rounded mb-4"
+          required
         />
+
         <input
           placeholder="Email"
+          type="email"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          className="w-full p-2 border border-gray-300 rounded mb-4"
+          required
         />
-        <input type="file" accept="image/*" onChange={handleImageChange} />
+
+        <button
+          type="button"
+          className="text-blue-600 underline mb-4"
+          onClick={() => setShowPasswordFields(!showPasswordFields)}
+        >
+          {showPasswordFields ? 'Cancel Password Change' : '🔒 Change Password'}
+        </button>
+
+        {showPasswordFields && (
+          <>
+            <input
+              type="password"
+              placeholder="Current Password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded mb-4"
+              required
+            />
+            <input
+              type="password"
+              placeholder="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded mb-4"
+              required
+            />
+            <input
+              type="password"
+              placeholder="Confirm New Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded mb-4"
+              required
+            />
+          </>
+        )}
+
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="w-full mb-4"
+        />
 
         {croppedImage && (
           <img
             src={URL.createObjectURL(croppedImage)}
             alt="Preview"
             width="100"
-            style={{ borderRadius: '50%', marginTop: '10px' }}
+            className="rounded-full mx-auto mb-4"
           />
         )}
 
-        <div style={{ marginTop: '20px' }}>
-          <button type="submit" disabled={loading}>
+        <div className="flex justify-between items-center">
+          <button
+            type="submit"
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            disabled={loading}
+          >
             {loading ? 'Updating...' : 'Save'}
           </button>
-          <button type="button" onClick={() => navigate('/profile')} style={{ marginLeft: '10px' }}>
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            className="text-gray-600 underline ml-4"
+          >
             Cancel
           </button>
         </div>
