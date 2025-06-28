@@ -19,6 +19,8 @@ import MainLayout from './layouts/MainLayout';
 
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
+import SocialLoginHandler from './pages/SocialLoginHandler';
+
 
 
 // Inside <Routes>
@@ -118,6 +120,8 @@ const App = () => {
           />
           <Route path="/forgot-password" element={<ForgotPassword />} />
 <Route path="/reset-password" element={<ResetPassword />} />
+<Route path="/social-login" element={<SocialLoginHandler />} />
+
         </Routes>
       </Router>
 

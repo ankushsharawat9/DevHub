@@ -23,53 +23,58 @@ const UserSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: [true, 'Password is required'],
       minlength: [6, 'Password must be at least 6 characters'],
+    },
+
+    googleId: {
+      type: String, // Used for Google OAuth
+    },
+
+    loginType: {
+      type: String,
+      enum: ['manual', 'google'],
+      default: 'manual',
     },
 
     isVerified: {
       type: Boolean,
       default: false,
     },
+
     tokenVersion: {
-  type: Number,
-  default: 0,
-},
+      type: Number,
+      default: 0,
+    },
 
-
-    // ✅ Email Verification
     verificationToken: String,
     verificationTokenExpires: Date,
 
-    // ✅ Forgot Password
     resetPasswordToken: String,
     resetPasswordExpires: Date,
 
-    // ✅ Track password changes for JWT invalidation
     passwordChangedAt: Date,
 
-    // ✅ Profile Info
-    profilePic: String,        // Cloudinary secure_url
-    profilePicId: String,      // Cloudinary public_id
+    profilePic: String,       // Cloudinary secure_url
+    profilePicId: String,     // Cloudinary public_id
   },
   { timestamps: true }
 );
 
-// 🔐 Hash password before saving, update passwordChangedAt
+// 🔐 Hash password before save (manual users only)
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
 
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
-    this.passwordChangedAt = new Date(); // 👈 update timestamp when password changes
+    this.passwordChangedAt = new Date();
     next();
   } catch (err) {
     next(err);
   }
 });
 
-// 🔍 Compare password method
+// 🔍 Compare candidate password
 UserSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };

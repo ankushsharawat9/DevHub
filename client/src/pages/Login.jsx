@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-
+import { FcGoogle } from "react-icons/fc";
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -85,14 +85,36 @@ const Login = () => {
               'Login'
             )}
           </button>
-          <p className="text-sm mt-2">
-  Forgot your password? <a href="/forgot-password" className="text-blue-600 underline">Reset</a>
-</p>
-<p className="text-sm text-gray-600 mt-2">
-  <a href="/forgot-password" className="text-blue-600 hover:underline">
-    Forgot Password?
-  </a>
-</p>
+<a
+  href="http://localhost:8080/api/auth/google"
+  className="w-half flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded transition"
+><br></br>
+  <FcGoogle className="w-5 h-5" />
+  <span className="text-sm font-medium">Continue with Google</span>
+</a>
+
+
+          {/* Forgot Password */}
+          <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
+            Forgot your password?{' '}
+            <a href="/forgot-password" className="text-blue-600 hover:underline">
+              Reset here
+            </a>
+          </p>
+
+          {/* Divider */}
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white dark:bg-gray-800 px-2 text-gray-500">or</span>
+            </div>
+          </div>
+
+          {/* Google Login */}
+
+
 
 
         </form>
