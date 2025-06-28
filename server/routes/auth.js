@@ -10,7 +10,24 @@ const { upload } = require('../config/cloudinary');
 const { sendVerificationEmail } = require('../utils/sendVerificationEmail');
 const sendEmail = require('../utils/sendEmail');
 
-// 🟢 GET /me
+// Utils: Token Generators
+const generateAccessToken = (user) => {
+  return jwt.sign(
+    { id: user._id, tokenVersion: user.tokenVersion },
+    process.env.JWT_SECRET,
+    { expiresIn: '15m' }
+  );
+};
+
+const generateRefreshToken = (user) => {
+  return jwt.sign(
+    { id: user._id, tokenVersion: user.tokenVersion },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: '7d' }
+  );
+};
+
+// 🟢 GET /me (Protected)
 router.get('/me', verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
@@ -85,54 +102,130 @@ router.get('/verify-email', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+
     if (!email || !password)
       return res.status(400).json({ message: 'Email and password required' });
 
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
-
-    if (user.loginType === 'google')
-      return res.status(400).json({ message: 'Use Google login for this account' });
+    const user = await User.findOne({ email }).select('+password');
+    if (!user || user.loginType === 'google') {
+      return res
+        .status(400)
+        .json({ message: 'Invalid credentials or use Google login' });
+    }
 
     if (!user.isVerified)
       return res.status(403).json({ message: 'Please verify your email first' });
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-    const token = jwt.sign(
-      { id: user._id, tokenVersion: user.tokenVersion },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    res.cookie('jid', refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'Lax',
+      path: '/api/auth/refresh-token',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     res.status(200).json({
       message: 'Login successful',
-      token,
+      accessToken,
       user: { id: user._id, name: user.name, email: user.email },
     });
-  } catch {
+  } catch (err) {
+    console.error('❌ Login error:', err); // Add this to see exact issue
     res.status(500).json({ message: 'Server error during login' });
   }
 });
 
-// 🟢 PUT /me
+
+// 🟢 POST /refresh-token
+router.post('/refresh-token', async (req, res) => {
+  const token = req.cookies.jid;
+  if (!token) return res.status(401).json({ accessToken: '' });
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    const user = await User.findById(payload.id);
+
+    if (!user || user.tokenVersion !== payload.tokenVersion)
+      return res.status(401).json({ accessToken: '' });
+
+    const newAccessToken = generateAccessToken(user);
+    res.json({ accessToken: newAccessToken });
+  } catch {
+    return res.status(401).json({ accessToken: '' });
+  }
+});
+
+// 🟢 PUT /me (update name/email)
 router.put('/me', verifyToken, async (req, res) => {
   try {
-    const updates = {};
-    if (req.body.name) updates.name = req.body.name;
-    if (req.body.email) updates.email = req.body.email;
+    const { name, email } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (req.body.password)
-      return res.status(400).json({ message: 'Use /change-password instead' });
+    if (email && email !== user.email) {
+      const existing = await User.findOne({ email });
+      if (existing)
+        return res.status(400).json({ message: 'This new email is already in use' });
 
-    const updatedUser = await User.findByIdAndUpdate(req.user.id, updates, {
-      new: true,
-    }).select('-password');
+      const verificationToken = crypto.randomBytes(32).toString('hex');
 
-    res.json({ message: 'Profile updated', user: updatedUser });
+      user.pendingEmail = email;
+      user.emailVerificationToken = verificationToken;
+      user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+
+      await user.save();
+      await sendVerificationEmail(email, verificationToken);
+      await sendEmail({
+        to: user.email,
+        subject: 'Email Change Alert',
+        text: `Hi ${user.name}, someone requested an email change.`,
+      });
+
+      return res.status(200).json({ message: 'Verify your new email to complete the update.' });
+    }
+
+    if (name) user.name = name;
+    await user.save();
+    res.json({ message: 'Profile updated', user: { name: user.name, email: user.email } });
   } catch {
     res.status(500).json({ message: 'Profile update error' });
+  }
+});
+
+// 🟢 GET /confirm-new-email
+router.get('/confirm-new-email', async (req, res) => {
+  const { token } = req.query;
+
+  try {
+    const user = await User.findOne({
+      emailVerificationToken: token,
+      emailVerificationExpires: { $gt: Date.now() },
+    });
+
+    if (!user || !user.pendingEmail)
+      return res.status(400).json({ message: 'Invalid or expired token' });
+
+    user.email = user.pendingEmail;
+    user.pendingEmail = undefined;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+
+    await sendEmail({
+      to: user.email,
+      subject: '✅ Email Updated Successfully',
+      text: `Hi ${user.name},\n\nYour email has been changed.`,
+    });
+
+    res.redirect('http://localhost:3000/verified?emailChanged=true');
+  } catch {
+    res.status(500).json({ message: 'Error confirming new email' });
   }
 });
 
@@ -192,12 +285,10 @@ router.post('/forgot-password', async (req, res) => {
     await user.save();
 
     const resetUrl = `http://localhost:3000/reset-password?token=${token}`;
-    const message = `Hi ${user.name},\n\nClick to reset password:\n${resetUrl}`;
-
     await sendEmail({
       to: user.email,
       subject: 'Reset Your Password',
-      text: message,
+      text: `Hi ${user.name},\n\nClick to reset password:\n${resetUrl}`,
     });
 
     res.status(200).json({ message: 'Reset email sent' });
@@ -218,17 +309,13 @@ router.post('/reset-password', async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({
-        message: 'Reset token expired or invalid',
-        expired: true,
-      });
+      return res.status(400).json({ message: 'Reset token expired or invalid', expired: true });
     }
 
     user.password = newPassword;
     user.tokenVersion += 1;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
-
     await user.save();
 
     await sendEmail({
@@ -244,12 +331,9 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // 🟢 Google OAuth2 Login Entry Point
-router.get(
-  '/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-// 🟢 Google OAuth2 Redirect Callback
+// 🟢 Google OAuth2 Callback
 router.get(
   '/google/callback',
   passport.authenticate('google', {
@@ -270,7 +354,7 @@ router.get(
   }
 );
 
-// 🔴 Fallback if Google login fails
+// 🔴 Google OAuth failure redirect
 router.get('/google/failure', (req, res) => {
   res.redirect('http://localhost:3000/social-login?error=google_auth_failed');
 });

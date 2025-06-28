@@ -52,12 +52,15 @@ export default function Register() {
     setRegistered(false);
 
     try {
-      const { name, email, password } = formData;
+      const { name, email, password, confirmPassword } = formData;
+
       const res = await axios.post('http://localhost:8080/api/auth/register', {
         name,
         email,
-        password
+        password,
+        confirmPassword
       });
+
       toast.success('✅ Registered! Verification email sent.');
       setRegistered(true);
       console.log('✅ Registered:', res.data);

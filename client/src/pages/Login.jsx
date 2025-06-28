@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { FcGoogle } from "react-icons/fc";
+
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -19,7 +20,7 @@ const Login = () => {
 
     try {
       const res = await axios.post('http://localhost:8080/api/auth/login', formData);
-      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('token', res.data.accessToken); // ✅ correct key name
       toast.success('✅ Login successful!');
       navigate('/dashboard');
     } catch (err) {
@@ -32,7 +33,9 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 shadow-lg p-8 rounded-md transition-all duration-300">
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Login to DevHub</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">
+          Login to DevHub
+        </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Email */}
@@ -77,7 +80,11 @@ const Login = () => {
               <span className="flex justify-center items-center gap-2">
                 <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z" />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                  />
                 </svg>
                 Logging in...
               </span>
@@ -85,14 +92,17 @@ const Login = () => {
               'Login'
             )}
           </button>
-<a
-  href="http://localhost:8080/api/auth/google"
-  className="w-half flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded transition"
-><br></br>
-  <FcGoogle className="w-5 h-5" />
-  <span className="text-sm font-medium">Continue with Google</span>
-</a>
 
+          {/* Google Login */}
+          <a
+            href="http://localhost:8080/api/auth/google"
+            className="w-full flex items-center justify-center gap-2 bg-white border py-2 rounded hover:shadow transition"
+          >
+            <FcGoogle className="w-5 h-5" />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              Continue with Google
+            </span>
+          </a>
 
           {/* Forgot Password */}
           <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
@@ -111,12 +121,6 @@ const Login = () => {
               <span className="bg-white dark:bg-gray-800 px-2 text-gray-500">or</span>
             </div>
           </div>
-
-          {/* Google Login */}
-
-
-
-
         </form>
       </div>
     </div>

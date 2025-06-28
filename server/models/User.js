@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
+// User schema
 const UserSchema = new mongoose.Schema(
   {
     name: {
@@ -24,10 +25,12 @@ const UserSchema = new mongoose.Schema(
     password: {
       type: String,
       minlength: [6, 'Password must be at least 6 characters'],
+      select: false, // Prevent return of password in queries
     },
 
     googleId: {
-      type: String, // Used for Google OAuth
+      type: String,
+      default: null,
     },
 
     loginType: {
@@ -46,23 +49,40 @@ const UserSchema = new mongoose.Schema(
       default: 0,
     },
 
+    // Email change (pending new email confirmation)
+    pendingEmail: String,
+    emailVerificationToken: String,
+    emailVerificationExpires: Date,
+
+    // Email verification on register
     verificationToken: String,
     verificationTokenExpires: Date,
 
+    // Forgot password
     resetPasswordToken: String,
     resetPasswordExpires: Date,
 
+    // For tracking when password was last changed
     passwordChangedAt: Date,
 
-    profilePic: String,       // Cloudinary secure_url
-    profilePicId: String,     // Cloudinary public_id
+    // Cloudinary profile image
+    profilePic: {
+      type: String, // secure URL
+      default: '',  // Optional
+    },
+    profilePicId: {
+      type: String, // Cloudinary public_id
+    },
   },
   { timestamps: true }
 );
 
-// 🔐 Hash password before save (manual users only)
+//
+// 🔐 Pre-save hook to hash password only if user is manual and password is modified
+//
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
+  if (this.loginType === 'google') return next(); // Don't hash password for Google users
 
   try {
     const salt = await bcrypt.genSalt(10);
@@ -74,9 +94,27 @@ UserSchema.pre('save', async function (next) {
   }
 });
 
-// 🔍 Compare candidate password
+//
+// 🔍 Compare password method
+//
 UserSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+//
+// 🧼 Public profile method (optional, use in routes if needed)
+//
+UserSchema.methods.toPublic = function () {
+  const obj = this.toObject();
+  delete obj.password;
+  delete obj.verificationToken;
+  delete obj.verificationTokenExpires;
+  delete obj.resetPasswordToken;
+  delete obj.resetPasswordExpires;
+  delete obj.tokenVersion;
+  delete obj.emailVerificationToken;
+  delete obj.emailVerificationExpires;
+  return obj;
 };
 
 module.exports = mongoose.model('User', UserSchema);
