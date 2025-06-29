@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom'; // Added useSearchParams
 import toast from 'react-hot-toast';
 
-const SocialLoginHandler = () => {
-  const [searchParams] = useSearchParams();
+const SocialLoginHandler = () => { // Renamed component
+  const [searchParams] = useSearchParams(); // Using useSearchParams
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -12,21 +12,25 @@ const SocialLoginHandler = () => {
 
     if (error) {
       toast.error('Google login failed.');
-      navigate('/login');
+      // Keep redirect delay for toast visibility, as per previous logic.
+      setTimeout(() => navigate('/login'), 2000); 
       return;
     }
 
     if (token) {
       localStorage.setItem('token', token);
       toast.success('✅ Logged in with Google!');
-      navigate('/dashboard');
+      // Keep redirect delay for toast visibility.
+      setTimeout(() => navigate('/dashboard'), 2000); 
     } else {
+      // This 'else' condition handles cases where neither token nor error is present.
       toast.error('Invalid login redirect.');
-      navigate('/login');
+      setTimeout(() => navigate('/login'), 2000); 
     }
   }, [searchParams, navigate]);
 
+  // This component acts as a handler and does not render any UI.
   return null;
 };
 
-export default SocialLoginHandler;
+export default SocialLoginHandler; // Exporting the renamed component

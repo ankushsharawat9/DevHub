@@ -16,6 +16,7 @@ import ResetPassword from './pages/ResetPassword';
 import ConfirmNewEmail from './pages/ConfirmNewEmail';
 import SocialLoginHandler from './pages/SocialLoginHandler';
 
+
 // Layout
 import MainLayout from './layouts/MainLayout';
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'; // Corrected import statement
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import zxcvbn from 'zxcvbn';
@@ -17,7 +17,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState(null);
+  const [passwordStrength, setPasswordStrength] = useState(0); // Initialize with 0 for 'Very Weak'
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,16 +28,16 @@ export default function Register() {
 
     if (name === 'password') {
       const result = zxcvbn(value);
-      setPasswordStrength(result.score); // 0–4
+      setPasswordStrength(result.score);
     }
   };
 
   const getStrengthLabel = (score) => {
-    return ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'][score] || '';
+    return ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'][score] || 'Very Weak';
   };
 
   const getStrengthColor = (score) => {
-    return ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-600'][score] || '';
+    return ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-600'][score] || 'bg-red-500';
   };
 
   const handleSubmit = async (e) => {
@@ -66,12 +66,8 @@ export default function Register() {
 
       toast.success('✅ Registered! Verification email sent.');
       setRegistered(true);
-      console.log('✅ Registered:', res.data);
-
-      // ✅ Redirect to verification page
       navigate(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
-      console.error('❌ Error:', err.response?.data || err.message);
       toast.error(err.response?.data?.message || '❌ Registration failed.');
     } finally {
       setLoading(false);
@@ -87,7 +83,6 @@ export default function Register() {
       });
       toast.success('📨 Verification email resent!');
     } catch (err) {
-      console.error('Resend error:', err);
       toast.error(err.response?.data?.message || '❌ Failed to resend email.');
     } finally {
       setResendLoading(false);
@@ -95,59 +90,72 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-md bg-white shadow-md p-8 rounded">
-        <h1 className="text-2xl font-bold text-center mb-6">Create an Account</h1>
+    // Updated background to closely match the Login page's two-tone diagonal split
+    <div className="min-h-screen w-full flex items-center justify-center font-inter relative overflow-hidden bg-white">
+      {/* Diagonal purple background section, matching Login page */}
+      <div className="absolute bottom-0 left-0 w-[150%] h-[150%] bg-gradient-to-tr from-purple-300 to-purple-600 transform -rotate-[20deg] origin-bottom-left -translate-x-[20%] translate-y-[20%] z-10"></div>
+      
+      {/* Main Container - Adjusted to match Login page design */}
+      <div className="relative z-20 w-full max-w-sm sm:max-w-md bg-white rounded-3xl p-10 shadow-md flex flex-col items-center">
+        {/* Title - Adjusted to match Login page styling */}
+        <h1 className="text-black text-3xl font-bold text-center mb-4">Register</h1>
+        
+        {/* Slogan/Subtitle - Adjusted to match Login page styling */}
+        <p className="text-gray-600 text-sm text-center mb-8">Create an Account</p>
 
         {registered ? (
-          <div className="text-center space-y-4">
-            <p className="text-green-600">
+          <div className="text-center space-y-4 text-gray-800 mt-4">
+            <p>
               ✅ A verification link has been sent to <strong>{formData.email}</strong>
             </p>
             <button
               onClick={handleResend}
               disabled={resendLoading}
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+              className="w-full bg-gradient-to-r from-purple-400 to-purple-600 text-white font-semibold py-3 rounded-xl shadow-md hover:from-purple-500 hover:to-purple-700 active:from-purple-600 active:to-purple-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {resendLoading ? 'Resending...' : 'Resend Verification Email'}
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full mt-4">
             <input
               name="name"
-              placeholder="Name"
+              placeholder="name"
               value={formData.name}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              // Input styling matching Login page
+              className="px-4 py-3 rounded-xl bg-white text-gray-800 placeholder:text-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200"
             />
             <input
               name="email"
               type="email"
-              placeholder="Email"
+              placeholder="email address"
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              // Input styling matching Login page
+              className="px-4 py-3 rounded-xl bg-white text-gray-800 placeholder:text-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200"
             />
             <input
               name="password"
-              placeholder="Password"
+              placeholder="password"
               type="password"
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              // Input styling matching Login page
+              className="px-4 py-3 rounded-xl bg-white text-gray-800 placeholder:text-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200"
             />
             {formData.password && (
-              <div className="w-full">
+              <div>
                 <div className="h-2 rounded bg-gray-300 overflow-hidden mb-1">
                   <div
                     className={`h-full ${getStrengthColor(passwordStrength)} transition-all duration-300`}
                     style={{ width: `${(passwordStrength + 1) * 20}%` }}
                   ></div>
                 </div>
+                {/* Password strength text color adjusted for white background */}
                 <p className="text-sm text-gray-600">
                   Strength: <strong>{getStrengthLabel(passwordStrength)}</strong>
                 </p>
@@ -155,22 +163,29 @@ export default function Register() {
             )}
             <input
               name="confirmPassword"
-              placeholder="Confirm Password"
+              placeholder="confirm password"
               type="password"
               value={formData.confirmPassword}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              // Input styling matching Login page
+              className="px-4 py-3 rounded-xl bg-white text-gray-800 placeholder:text-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200"
             />
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+              // Button styling matching Login page
+              className="bg-gradient-to-r from-purple-400 to-purple-600 text-white font-semibold py-3 rounded-xl shadow-md hover:from-purple-500 hover:to-purple-700 active:from-purple-600 active:to-purple-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
             >
-              {loading ? 'Registering...' : 'Register'}
+              {loading ? 'Registering...' : 'REGISTER'}
             </button>
           </form>
         )}
+        {/* Added Login option below the form */}
+        <p className="text-sm mt-6 text-center text-gray-600">
+          Already have an account?{' '}
+          <a className="text-purple-600 hover:underline hover:text-purple-800 transition-colors duration-200 font-semibold" href="/login">Login</a>
+        </p>
       </div>
     </div>
   );

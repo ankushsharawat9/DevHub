@@ -3,18 +3,47 @@ import { Link } from 'react-router-dom';
 
 const Navbar = () => {
   return (
-    <nav className="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center">
-      <div className="text-xl font-bold">🚀 DevHub</div>
-      <div className="flex gap-[10px]">
-        <Link to="/" className="hover:text-blue-400  ">Home</Link>&nbsp;&nbsp;&nbsp;&nbsp;
-        <Link to="/register" className="hover:text-blue-400">Register</Link>&nbsp;&nbsp;&nbsp;&nbsp;
-        <Link to="/login" className="hover:text-blue-400">Login</Link>&nbsp;&nbsp;&nbsp;&nbsp;
-        <Link to="/dashboard" className="hover:text-blue-400">Dashboard</Link>&nbsp;&nbsp;&nbsp;&nbsp;
-        <Link to="/profile" className="hover:text-blue-400">Profile</Link>&nbsp;&nbsp;&nbsp;
+    // Updated Navbar styling to match the application's design
+    <nav className="bg-white text-gray-800 p-4 shadow-md flex justify-between items-center rounded-b-lg font-inter relative z-30">
+      {/* Brand/Logo */}
+      <div className="text-xl font-bold text-purple-600">🚀 DevHub</div>
+      
+      {/* Navigation Links */}
+      {/* Using Tailwind's gap utility for spacing instead of &nbsp; */}
+      <div className="flex gap-6 text-base font-semibold"> 
+        <Link 
+          to="/" 
+          className="text-gray-700 hover:text-purple-600 transition-colors duration-200"
+        >
+          Home
+        </Link>
+        <Link 
+          to="/register" 
+          className="text-gray-700 hover:text-purple-600 transition-colors duration-200"
+        >
+          Register
+        </Link>
+        <Link 
+          to="/login" 
+          className="text-gray-700 hover:text-purple-600 transition-colors duration-200"
+        >
+          Login
+        </Link>
+        <Link 
+          to="/dashboard" 
+          className="text-gray-700 hover:text-purple-600 transition-colors duration-200"
+        >
+          Dashboard
+        </Link>
+        <Link 
+          to="/profile" 
+          className="text-gray-700 hover:text-purple-600 transition-colors duration-200"
+        >
+          Profile
+        </Link>
       </div>
     </nav>
   );
 };
 
 export default Navbar;
-
