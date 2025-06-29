@@ -1,5 +1,5 @@
-const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const passport = require('passport');
 const User = require('../models/User');
 
 passport.use(
@@ -7,37 +7,55 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_REDIRECT_URI,
+      callbackURL: '/api/auth/google/callback',
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const email = profile.emails?.[0]?.value;
-        if (!email) return done(new Error('Google profile has no email'), null);
+        const email = profile.emails[0].value;
+        const name = profile.displayName;
 
-        const existingUser = await User.findOne({ email });
+        let user = await User.findOne({ email });
 
-        if (existingUser && !existingUser.googleId) {
-          return done(
-            new Error('This email is already registered manually. Please login using email and password.'),
-            null
-          );
+        if (user) {
+          console.log('✅ Existing user found for Google login');
+
+          // If user registered manually but not verified, you can optionally:
+          // if (!user.isVerified) {
+          //   user.isVerified = true;
+          //   await user.save();
+          // }
+
+          return done(null, user);
         }
 
-        if (existingUser) return done(null, existingUser);
-
-        const newUser = await User.create({
-          googleId: profile.id,
-          name: profile.displayName,
+        // No existing user found, create a new one via Google
+        const newUser = new User({
+          name,
           email,
-          profilePic: profile.photos?.[0]?.value,
-          isVerified: true,
-          loginType: 'google', // ✅ Save login type
+          isVerified: true, // Google account is trusted
+          password: Math.random().toString(36).slice(-8), // dummy password for required field
         });
 
+        await newUser.save();
+        console.log('✅ New user created via Google login');
         return done(null, newUser);
       } catch (err) {
+        console.error('❌ Error in Google Strategy:', err);
         return done(err, null);
       }
     }
   )
 );
+
+// For sessions (optional, can be removed if you're stateless with JWT)
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err, null);
+  }
+});
