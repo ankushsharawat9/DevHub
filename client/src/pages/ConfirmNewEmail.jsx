@@ -19,6 +19,8 @@ const VerifyEmail = () => {
     const searchParams = new URLSearchParams(location.search);
     const token = searchParams.get('token');
     const emailFromQuery = searchParams.get('email');
+    const isEmailChange = location.pathname.includes('confirm-new-email');
+
     if (emailFromQuery) setEmail(emailFromQuery);
 
     if (!token) {
@@ -30,35 +32,35 @@ const VerifyEmail = () => {
       return;
     }
 
-    const isEmailChange = location.pathname === '/confirm-new-email';
+    const endpoint = isEmailChange ? '/confirm-new-email' : '/verify-email';
 
     const verify = async () => {
       try {
-        if (isEmailChange) {
-          // Redirect user to backend for email confirmation
-          window.location.href = `http://localhost:8080/api/auth/confirm-new-email?token=${token}`;
-        } else {
-          // Standard email verification (manual registration)
-          await axios.get(`http://localhost:8080/api/auth/verify-email?token=${token}`);
-          setStatus({
-            loading: false,
-            message: '✅ Email verified successfully! Redirecting to login...',
-            success: true,
-          });
-          setTimeout(() => navigate('/login'), 2500);
-        }
-      } catch (err) {
-        const errorMsg = err.response?.data?.message || '❌ Verification failed.';
+        await axios.get(`http://localhost:8080/api/auth${endpoint}?token=${token}`);
         setStatus({
           loading: false,
-          message: errorMsg,
+          message: '✅ Email verified successfully! Redirecting...',
+          success: true,
+        });
+
+        setTimeout(() => {
+          if (isEmailChange) {
+            navigate('/verified?emailChanged=true');
+          } else {
+            navigate('/login');
+          }
+        }, 2500);
+      } catch (err) {
+        setStatus({
+          loading: false,
+          message: err.response?.data?.message || '❌ Verification failed.',
           success: false,
         });
       }
     };
 
     verify();
-  }, [location.pathname, location.search, navigate]);
+  }, [location.search, location.pathname, navigate]);
 
   const handleResend = async () => {
     if (!email) {
@@ -78,10 +80,9 @@ const VerifyEmail = () => {
         success: null,
       });
     } catch (err) {
-      const errorMsg = err.response?.data?.message || '❌ Resending failed.';
       setStatus({
         loading: false,
-        message: errorMsg,
+        message: err.response?.data?.message || '❌ Resending failed.',
         success: false,
       });
     } finally {

@@ -1,54 +1,74 @@
 import nodemailer from 'nodemailer';
 
-export const sendVerificationEmail = async (toEmail, verificationToken) => {
+export const sendVerificationEmail = async (toEmail, verificationToken, type = 'register') => {
   try {
-    // Setup transporter using Gmail SMTP
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER, // Gmail address
-        pass: process.env.EMAIL_PASS, // Gmail App password
+        user: process.env.EMAIL_USER, // Your Gmail
+        pass: process.env.EMAIL_PASS, // Gmail App Password
       },
     });
 
-    // Construct verification URL
-    const verificationUrl = `${process.env.BASE_URL}/verify-email?token=${verificationToken}`;
+    // Determine correct path and messaging
+    const isEmailChange = type === 'emailChange';
+    const path = isEmailChange ? '/confirm-new-email' : '/verify-email';
+    const url = `${process.env.FRONTEND_URL}${path}?token=${verificationToken}&email=${toEmail}`;
 
-    // Define email content
-    const mailOptions = {
-      from: `"DevHub" <${process.env.EMAIL_USER}>`,
-      to: toEmail,
-      subject: 'Verify Your DevHub Email',
-      html: `
-        <h2>Welcome to DevHub!</h2>
-        <p>Thanks for signing up. Please verify your email address by clicking the link below:</p>
-        <p>
-          <a href="${verificationUrl}" target="_blank" rel="noopener noreferrer" style="background-color:#6366F1;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">
-            ✅ Verify My Email
+    const subject = isEmailChange
+      ? 'Confirm Your New Email Address'
+      : 'Verify Your DevHub Email';
+
+    const buttonText = isEmailChange
+      ? '✅ Confirm New Email'
+      : '✅ Verify My Email';
+
+    const introText = isEmailChange
+      ? 'Please confirm your new email address by clicking the button below:'
+      : 'Thanks for signing up. Please verify your email by clicking below:';
+
+    // Email HTML
+    const html = `
+      <div style="font-family:sans-serif; max-width:600px; margin:auto; padding:20px;">
+        <h2>${subject}</h2>
+        <p>${introText}</p>
+        <p style="text-align:center; margin:30px 0;">
+          <a href="${url}" target="_blank" rel="noopener noreferrer"
+             style="display:inline-block;background-color:#6366F1;color:white;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">
+            ${buttonText}
           </a>
         </p>
-        <p>If the button doesn't work, copy and paste this URL into your browser:</p>
-        <p><code>${verificationUrl}</code></p>
-        <br/>
-        <p>This link will expire in <strong>24 hours</strong>.</p>
-      `,
-      text: `
-Welcome to DevHub!
+        <p>If the button doesn't work, paste this URL in your browser:</p>
+        <code style="word-break:break-all; background:#f4f4f4; padding:10px; display:block; border-radius:4px;">${url}</code>
+        <p style="margin-top:20px;">This link will expire in <strong>24 hours</strong>.</p>
+        <hr/>
+        <p style="font-size:0.9em;color:#777;">If you did not request this, you can safely ignore it.</p>
+      </div>
+    `;
 
-Thanks for signing up. Please verify your email by visiting this link:
-${verificationUrl}
+    const text = `
+${subject}
 
-If the link doesn't work, copy and paste it into your browser.
+${introText}
 
-This link will expire in 24 hours.
-      `.trim(),
-    };
+${url}
 
-    // Send the email
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Verification email sent to ${toEmail}`);
+If the button above doesn't work, copy and paste the URL into your browser.
+This link expires in 24 hours.
+    `.trim();
+
+    // Send email
+    await transporter.sendMail({
+      from: `"DevHub" <${process.env.EMAIL_USER}>`,
+      to: toEmail,
+      subject,
+      html,
+      text,
+    });
+
+    console.log(`📨 Email sent to ${toEmail} for ${type === 'emailChange' ? 'email change' : 'registration'} verification.`);
   } catch (err) {
-    console.error('❌ Email send error:', err.message);
-    throw new Error('Email could not be sent');
+    console.error('❌ Failed to send verification email:', err.message);
+    throw new Error('Failed to send verification email');
   }
 };

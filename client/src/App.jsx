@@ -13,18 +13,14 @@ import EditProfile from './pages/EditProfile';
 import Dashboard from './pages/Dashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import ConfirmNewEmail from './pages/ConfirmNewEmail';
+import SocialLoginHandler from './pages/SocialLoginHandler';
 
 // Layout
 import MainLayout from './layouts/MainLayout';
 
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
-import SocialLoginHandler from './pages/SocialLoginHandler';
-
-
-
-// Inside <Routes>
-
 
 const App = () => {
   const token = localStorage.getItem('token');
@@ -32,14 +28,13 @@ const App = () => {
   return (
     <div className="bg-white text-black dark:bg-gray-900 dark:text-white min-h-screen transition-colors duration-300">
       <Router>
-        {/* Toast Notifications */}
         <Toaster position="top-right" reverseOrder={false} />
 
         <Routes>
           {/* Redirect root to /home */}
           <Route path="/" element={<Navigate to="/home" replace />} />
 
-          {/* Public Routes (with layout) */}
+          {/* Public Routes */}
           <Route
             path="/home"
             element={
@@ -48,6 +43,7 @@ const App = () => {
               </MainLayout>
             }
           />
+
           <Route
             path="/verify-email"
             element={
@@ -56,6 +52,7 @@ const App = () => {
               </MainLayout>
             }
           />
+
           <Route
             path="/verified"
             element={
@@ -64,10 +61,35 @@ const App = () => {
               </MainLayout>
             }
           />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-<Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Auth Routes (no layout) */}
+          <Route
+            path="/confirm-new-email"
+            element={
+              <MainLayout>
+                <VerifyEmail /> {/* ✅ Shared VerifyEmail component for new email confirmation */}
+              </MainLayout>
+            }
+          />
+
+          <Route
+            path="/forgot-password"
+            element={
+              <MainLayout>
+                <ForgotPassword />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <MainLayout>
+                <ResetPassword />
+              </MainLayout>
+            }
+          />
+          <Route path="/social-login" element={<SocialLoginHandler />} />
+
+          {/* Auth Routes */}
           <Route
             path="/login"
             element={token ? <Navigate to="/dashboard" replace /> : <Login />}
@@ -77,7 +99,7 @@ const App = () => {
             element={token ? <Navigate to="/dashboard" replace /> : <Register />}
           />
 
-          {/* Protected Routes (with layout) */}
+          {/* Protected Routes */}
           <Route
             path="/dashboard"
             element={
@@ -109,7 +131,7 @@ const App = () => {
             }
           />
 
-          {/* Catch-all 404 Page */}
+          {/* Catch-all 404 */}
           <Route
             path="*"
             element={
@@ -118,14 +140,8 @@ const App = () => {
               </div>
             }
           />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-<Route path="/reset-password" element={<ResetPassword />} />
-<Route path="/social-login" element={<SocialLoginHandler />} />
-
         </Routes>
       </Router>
-
-      
     </div>
   );
 };
