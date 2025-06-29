@@ -1,6 +1,9 @@
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const passport = require('passport');
-const User = require('../models/User');
+import dotenv from 'dotenv';
+dotenv.config();
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import User from '../models/User.js';
+
 
 passport.use(
   new GoogleStrategy(
@@ -19,7 +22,7 @@ passport.use(
         if (user) {
           console.log('✅ Existing user found for Google login');
 
-          // If user registered manually but not verified, you can optionally:
+          // Optional: mark unverified manual user as verified
           // if (!user.isVerified) {
           //   user.isVerified = true;
           //   await user.save();
@@ -28,12 +31,12 @@ passport.use(
           return done(null, user);
         }
 
-        // No existing user found, create a new one via Google
+        // Create new user for Google account
         const newUser = new User({
           name,
           email,
-          isVerified: true, // Google account is trusted
-          password: Math.random().toString(36).slice(-8), // dummy password for required field
+          isVerified: true,
+          password: Math.random().toString(36).slice(-8), // dummy password
         });
 
         await newUser.save();
@@ -47,10 +50,11 @@ passport.use(
   )
 );
 
-// For sessions (optional, can be removed if you're stateless with JWT)
+// Optional session handling (can be removed if using JWT stateless auth)
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
+
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);

@@ -1,8 +1,7 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
 
-// User schema
-const UserSchema = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -25,7 +24,7 @@ const UserSchema = new mongoose.Schema(
     password: {
       type: String,
       minlength: [6, 'Password must be at least 6 characters'],
-      select: false, // Prevent return of password in queries
+      select: false,
     },
 
     googleId: {
@@ -48,41 +47,40 @@ const UserSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    role: {
+  type: String,
+  enum: ['user', 'admin'],
+  default: 'user',
+},
 
-    // Email change (pending new email confirmation)
+
     pendingEmail: String,
     emailVerificationToken: String,
     emailVerificationExpires: Date,
 
-    // Email verification on register
     verificationToken: String,
     verificationTokenExpires: Date,
 
-    // Forgot password
     resetPasswordToken: String,
     resetPasswordExpires: Date,
 
-    // For tracking when password was last changed
     passwordChangedAt: Date,
 
-    // Cloudinary profile image
     profilePic: {
-      type: String, // secure URL
-      default: '',  // Optional
+      type: String,
+      default: '',
     },
     profilePicId: {
-      type: String, // Cloudinary public_id
+      type: String,
     },
   },
   { timestamps: true }
 );
 
-//
-// 🔐 Pre-save hook to hash password only if user is manual and password is modified
-//
-UserSchema.pre('save', async function (next) {
+// 🔐 Pre-save hook: hash password (only if manual login and password is modified)
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  if (this.loginType === 'google') return next(); // Don't hash password for Google users
+  if (this.loginType === 'google') return next();
 
   try {
     const salt = await bcrypt.genSalt(10);
@@ -94,17 +92,13 @@ UserSchema.pre('save', async function (next) {
   }
 });
 
-//
-// 🔍 Compare password method
-//
-UserSchema.methods.comparePassword = async function (candidatePassword) {
+// 🔍 Method: Compare passwords
+userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-//
-// 🧼 Public profile method (optional, use in routes if needed)
-//
-UserSchema.methods.toPublic = function () {
+// 🧼 Method: Return public profile
+userSchema.methods.toPublic = function () {
   const obj = this.toObject();
   delete obj.password;
   delete obj.verificationToken;
@@ -117,4 +111,6 @@ UserSchema.methods.toPublic = function () {
   return obj;
 };
 
-module.exports = mongoose.model('User', UserSchema);
+const User = mongoose.model('User', userSchema);
+
+export default User;

@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
 const verifyToken = async (req, res, next) => {
   try {
@@ -25,7 +25,7 @@ const verifyToken = async (req, res, next) => {
       return res.status(401).json({ message: 'Token expired, please log in again' });
     }
 
-    req.user = user; // full user is now available in req.user
+    req.user = user;
     next();
   } catch (err) {
     console.error('❌ Token verification failed:', err.message);
@@ -33,4 +33,4 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-module.exports = verifyToken;
+export default verifyToken;

@@ -1,14 +1,16 @@
-const express = require('express');
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import passport from 'passport';
+import User from '../models/User.js';
+import { verifyToken, isAdmin } from '../middleware/authMiddleware.js'; // ✅ CORRECT
+
+import { upload } from '../config/cloudinary.js';
+import { sendVerificationEmail } from '../utils/sendVerificationEmail.js';
+import sendEmail from '../utils/sendEmail.js';
+
 const router = express.Router();
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const passport = require('passport');
-const User = require('../models/User');
-const verifyToken = require('../middleware/authMiddleware');
-const { upload } = require('../config/cloudinary');
-const { sendVerificationEmail } = require('../utils/sendVerificationEmail');
-const sendEmail = require('../utils/sendEmail');
 
 // 🔑 JWT Generators
 const generateAccessToken = (user) =>
@@ -150,7 +152,7 @@ router.post('/refresh-token', async (req, res) => {
   }
 });
 
-// 🟢 PUT /me (update name/email)
+// 🟢 PUT /me
 router.put('/me', verifyToken, async (req, res) => {
   try {
     const { name, email } = req.body;
@@ -158,32 +160,25 @@ router.put('/me', verifyToken, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // ✏️ Update name if provided
     if (name) {
       user.name = name;
     }
 
-    // 🔁 Email Change Logic
     if (email && email !== user.email) {
-      // Check if new email is already taken
       const existing = await User.findOne({ email });
       if (existing)
         return res.status(400).json({ message: 'This new email is already in use' });
 
-      // Generate a new token
       const verificationToken = crypto.randomBytes(32).toString('hex');
 
-      // Set pending email & verification fields
       user.pendingEmail = email;
       user.emailVerificationToken = verificationToken;
-      user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hrs
+      user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
 
       await user.save();
 
-      // ✅ Send confirmation link to new email (uses updated function)
       await sendVerificationEmail(email, verificationToken, 'emailChange');
 
-      // 📢 Alert original email
       await sendEmail({
         to: user.email,
         subject: 'Email Change Alert',
@@ -195,7 +190,6 @@ router.put('/me', verifyToken, async (req, res) => {
       });
     }
 
-    // Save name change (if applicable)
     await user.save();
 
     res.json({
@@ -216,42 +210,36 @@ router.get('/confirm-new-email', async (req, res) => {
   const { token } = req.query;
 
   try {
-    // Find user with matching token & unexpired
     const user = await User.findOne({
       emailVerificationToken: token,
       emailVerificationExpires: { $gt: Date.now() },
     });
 
-    // Validate user and presence of pending email
     if (!user || !user.pendingEmail) {
       return res.status(400).json({ message: 'Invalid or expired token' });
     }
 
-    // ✅ Update the user's email
     const oldEmail = user.email;
     user.email = user.pendingEmail;
     user.pendingEmail = undefined;
     user.emailVerificationToken = undefined;
     user.emailVerificationExpires = undefined;
-    user.isVerified = true; // Optional: re-verify user after change
+    user.isVerified = true;
 
     await user.save();
 
-    // 🔔 Notify user
     await sendEmail({
       to: user.email,
       subject: '✅ Email Updated Successfully',
       text: `Hi ${user.name},\n\nYour email has been successfully changed from ${oldEmail} to ${user.email}.`,
     });
 
-    // ✅ Redirect to confirmation page
     return res.redirect(`${process.env.FRONTEND_URL}/verified?emailChanged=true`);
   } catch (err) {
     console.error('❌ Error in /confirm-new-email:', err);
     return res.status(500).json({ message: 'Server error during email confirmation' });
   }
 });
-
 
 // 🟢 PUT /me/photo
 router.put('/me/photo', verifyToken, upload.single('photo'), async (req, res) => {
@@ -375,4 +363,4 @@ router.get('/google/failure', (req, res) => {
   res.redirect(`${process.env.FRONTEND_URL}/social-login?error=google_auth_failed`);
 });
 
-module.exports = router;
+export default router;

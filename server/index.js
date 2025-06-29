@@ -1,52 +1,64 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const path = require('path');
-const session = require('express-session');
-const passport = require('passport');
+// index.js
+import express from 'express';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import path from 'path';
+import session from 'express-session';
+import passport from 'passport';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-// Load environment variables
+// Load environment variables early
 dotenv.config();
+
+// ES Module replacements for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Initialize Express app
 const app = express();
 
 // === MIDDLEWARE ===
 
-// CORS setup
+// Enable CORS for frontend origin
 app.use(cors({
   origin: 'http://localhost:3000',
   credentials: true,
 }));
 
-// Parse JSON
+// Body parser
 app.use(express.json());
 
-// Serve uploads
+// Static files for uploaded assets
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Express session
+// Express session (needed for Passport)
 app.use(session({
   secret: process.env.SESSION_SECRET || 'devhub-secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false,
+    secure: false,       // true in production with HTTPS
     httpOnly: true,
   }
 }));
 
-// Passport setup
-require('./config/passport'); // Google OAuth strategy
+// Passport OAuth setup
+import './config/passport.js';
 app.use(passport.initialize());
 app.use(passport.session());
 
 // === ROUTES ===
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
+import authRoutes from './routes/auth.js';
+import categoryRoutes from './routes/category.js';
+import productRoutes from './routes/product.js';
 
-// === DATABASE ===
+app.use('/api/auth', authRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/products', productRoutes);
+
+// === MONGODB CONNECTION ===
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -54,7 +66,7 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => console.log('✅ MongoDB connected successfully.'))
 .catch((err) => console.error('❌ MongoDB connection error:', err.message));
 
-// === FRONTEND (Production) ===
+// === PRODUCTION FRONTEND SERVING ===
 if (process.env.NODE_ENV === 'production') {
   const clientBuildPath = path.join(__dirname, 'client', 'build');
   app.use(express.static(clientBuildPath));
@@ -63,6 +75,11 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(clientBuildPath, 'index.html'));
   });
 }
+
+// === FALLBACK FOR UNKNOWN ROUTES ===
+app.use((req, res, next) => {
+  res.status(404).json({ message: 'API route not found' });
+});
 
 // === START SERVER ===
 const PORT = process.env.PORT || 8080;

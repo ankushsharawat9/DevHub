@@ -5,12 +5,12 @@ export const sendVerificationEmail = async (toEmail, verificationToken, type = '
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER, // Your Gmail
-        pass: process.env.EMAIL_PASS, // Gmail App Password
+        user: process.env.EMAIL_USER, // Gmail address
+        pass: process.env.EMAIL_PASS, // App Password
       },
     });
 
-    // Determine correct path and messaging
+    // Define path and messaging based on type
     const isEmailChange = type === 'emailChange';
     const path = isEmailChange ? '/confirm-new-email' : '/verify-email';
     const url = `${process.env.FRONTEND_URL}${path}?token=${verificationToken}&email=${toEmail}`;
@@ -27,7 +27,6 @@ export const sendVerificationEmail = async (toEmail, verificationToken, type = '
       ? 'Please confirm your new email address by clicking the button below:'
       : 'Thanks for signing up. Please verify your email by clicking below:';
 
-    // Email HTML
     const html = `
       <div style="font-family:sans-serif; max-width:600px; margin:auto; padding:20px;">
         <h2>${subject}</h2>
@@ -57,7 +56,6 @@ If the button above doesn't work, copy and paste the URL into your browser.
 This link expires in 24 hours.
     `.trim();
 
-    // Send email
     await transporter.sendMail({
       from: `"DevHub" <${process.env.EMAIL_USER}>`,
       to: toEmail,

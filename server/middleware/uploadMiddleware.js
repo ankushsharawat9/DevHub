@@ -1,10 +1,10 @@
-const multer = require('multer');
-const path = require('path');
+import multer from 'multer';
+import path from 'path';
 
-// Multer storage in memory
+// Multer in-memory storage
 const storage = multer.memoryStorage();
 
-// File type filter
+// File filter to allow only specific image types
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|webp/;
   const ext = path.extname(file.originalname).toLowerCase();
@@ -17,11 +17,11 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Upload middleware with 2MB size limit
+// Final upload middleware
 const upload = multer({
   storage,
   fileFilter,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
 });
 
-module.exports = upload;
+export default upload;

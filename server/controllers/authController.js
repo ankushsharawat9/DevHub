@@ -1,15 +1,15 @@
-const User = require('../models/User');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const sendEmail = require('../utils/sendEmail'); // custom email util
+import User from '../models/User.js';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import sendEmail from '../utils/sendEmail.js';
 
-
+// 🔐 JWT Token Generator
 const generateToken = (user) => {
   return jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
-// REGISTER with email verification
-exports.register = async (req, res) => {
+// ✅ REGISTER with Email Verification
+export const register = async (req, res) => {
   const { name, email, password } = req.body;
 
   try {
@@ -40,15 +40,17 @@ exports.register = async (req, res) => {
       text: message,
     });
 
-    res.status(201).json({ message: 'Registration successful. Please check your email to verify.' });
+    res.status(201).json({
+      message: 'Registration successful. Please check your email to verify.',
+    });
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// LOGIN (only allow if verified)
-exports.login = async (req, res) => {
+// ✅ LOGIN (only if verified)
+export const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -63,6 +65,7 @@ exports.login = async (req, res) => {
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
     const token = generateToken(user);
+
     res.status(200).json({
       token,
       user: { id: user._id, name: user.name, email },
@@ -72,8 +75,8 @@ exports.login = async (req, res) => {
   }
 };
 
-// VERIFY EMAIL
-exports.verifyEmail = async (req, res) => {
+// ✅ VERIFY EMAIL
+export const verifyEmail = async (req, res) => {
   const { token } = req.query;
 
   try {
@@ -99,14 +102,16 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
-
-// FORGOT PASSWORD
-exports.forgotPassword = async (req, res) => {
+// ✅ FORGOT PASSWORD
+export const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
+    if (!user)
+      return res.status(200).json({
+        message: 'If that email exists, a reset link has been sent.',
+      });
 
     const resetToken = crypto.randomBytes(32).toString('hex');
     user.resetPasswordToken = resetToken;
@@ -125,18 +130,19 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// RESET PASSWORD
-exports.resetPassword = async (req, res) => {
+// ✅ RESET PASSWORD
+export const resetPassword = async (req, res) => {
   const { token } = req.query;
   const { password } = req.body;
 
   try {
     const user = await User.findOne({
       resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() }
+      resetPasswordExpires: { $gt: Date.now() },
     });
 
-    if (!user) return res.status(400).json({ message: 'Invalid or expired token' });
+    if (!user)
+      return res.status(400).json({ message: 'Invalid or expired token' });
 
     user.password = password;
     user.resetPasswordToken = undefined;
