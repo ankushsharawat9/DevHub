@@ -8,8 +8,14 @@ const Profile = () => {
   const navigate = useNavigate();
 
   const fetchProfile = useCallback(async () => {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      toast.error('⚠️ You are not logged in.');
+      return navigate('/login');
+    }
+
     try {
-      const token = localStorage.getItem('token');
       const res = await axios.get('http://localhost:8080/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true,
@@ -19,6 +25,7 @@ const Profile = () => {
       const errorMsg = err.response?.data?.message;
       console.error('❌ Error fetching profile:', errorMsg);
 
+      // Token expired or invalid: try refreshing
       if (errorMsg === 'Invalid or expired token') {
         try {
           const refreshRes = await axios.post(
@@ -26,8 +33,10 @@ const Profile = () => {
             {},
             { withCredentials: true }
           );
+
+          // ✅ Save new token and retry
           localStorage.setItem('token', refreshRes.data.accessToken);
-          await fetchProfile(); // 🔁 Retry with new token
+          await fetchProfile();
         } catch (refreshErr) {
           console.error('❌ Token refresh failed:', refreshErr.response?.data || refreshErr.message);
           toast.error('Session expired. Please log in again.');
@@ -38,14 +47,18 @@ const Profile = () => {
         toast.error('Failed to load profile. Please try again.');
       }
     }
-  }, [navigate]); // ✅ add dependencies
+  }, [navigate]);
 
   useEffect(() => {
     fetchProfile();
-  }, [fetchProfile]); // ✅ add fetchProfile to deps
+  }, [fetchProfile]);
 
   if (!user) {
-    return <p className="text-center mt-10 text-gray-500">Loading profile...</p>;
+    return (
+      <div className="text-center mt-10 text-gray-500">
+        Loading profile...
+      </div>
+    );
   }
 
   return (

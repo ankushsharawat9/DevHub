@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import zxcvbn from 'zxcvbn';
+import { useNavigate } from 'react-router-dom';
 
 export default function Register() {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -64,6 +67,9 @@ export default function Register() {
       toast.success('✅ Registered! Verification email sent.');
       setRegistered(true);
       console.log('✅ Registered:', res.data);
+
+      // ✅ Redirect to verification page
+      navigate(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       console.error('❌ Error:', err.response?.data || err.message);
       toast.error(err.response?.data?.message || '❌ Registration failed.');
